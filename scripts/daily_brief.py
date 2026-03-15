@@ -288,7 +288,7 @@ def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
     full_text = "\n".join(full)
 
     concise = []
-    concise.append(f"【盘前情报精华】{bj_now:%m-%d %H:%M}")
+    concise.append(f"【盘前情报简报】{bj_now:%m-%d %H:%M}")
     concise.append("主线雷达：" + "；".join([x.replace("- ", "") for x in radar_lines]))
 
     selected = [x for x in top_items if score_to_num(x["priority"]) >= score_to_num(min_score)]
@@ -360,7 +360,7 @@ def main():
     full_path = write_full_report(full, os.path.join(root, "output"))
     public_link = publish_markdown_if_possible(full_path)
 
-    footer = f"\n\n全量Markdown：{public_link or full_path}"
+    footer = f"\n\n简报说明：本消息为自动盘前简报\n全量Markdown：{public_link or full_path}"
     msg = concise + footer
 
     webhook = os.getenv("FEISHU_WEBHOOK")
