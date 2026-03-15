@@ -1,0 +1,20 @@
+name: Daily Intel Bot
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 23 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  run-daily-intel:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 查看仓库文件
+        run: ls -la
