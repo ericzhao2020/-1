@@ -144,6 +144,27 @@ def select_top_items(all_items: List[dict], top_n: int) -> List[dict]:
     return sorted(all_items, key=lambda x: (score_to_num(x["priority"]), x["source_rank"]), reverse=True)[:top_n]
 
 
+
+
+def build_a_tier_focus(watchlist: dict, limit: int = 12) -> List[str]:
+    out = []
+    for sector in watchlist.get("sectors", []):
+        sname = sector.get("name", "")
+        for c in sector.get("companies", []):
+            if c.get("tier") == "A":
+                maps = c.get("a_share_mapping", [])[:2]
+                mtxt = f" -> A股:{','.join(maps)}" if maps else ""
+                out.append(f"{sname}:{c.get('name')}{mtxt}")
+    return out[:limit]
+
+
+def build_failure_digest(failures: List[str], limit: int = 5) -> List[str]:
+    out = []
+    for i, f in enumerate(failures[:limit], 1):
+        out.append(f"{i}) {f[:120]}")
+    return out
+
+
 def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
     bj_now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8)))
     min_score = watchlist.get("min_score_for_feishu", "B")
@@ -295,11 +316,30 @@ def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
     if not selected:
         selected = top_items[:5]
 
-    for i, it in enumerate(selected[:8], 1):
-        concise.append(f"{i}) [{it['priority']}] {it['sector']} | {it['company']} | {it['summary']}")
+    concise.append("\n【今日最高优先级】")
+    if selected:
+        for i, it in enumerate(selected[:8], 1):
+            concise.append(f"{i}) [{it['priority']}] {it['sector']} | {it['company']} | {it['summary']}")
+    else:
+        concise.append("- 暂无可用新闻命中，转入预案内容")
+
+    concise.append("\n【未来7天事件预告】")
+    if event_preview:
+        for ev in event_preview[:5]:
+            concise.append(f"- {ev['date']} {ev['sector']} | {ev['title']}")
+    else:
+        concise.append("- 暂无配置事件")
+
+    concise.append("\n【A级公司焦点池】")
+    for line in build_a_tier_focus(watchlist, limit=10):
+        concise.append(f"- {line}")
 
     if all_failed:
-        concise.append("⚠️ 全部板块抓取失败，请检查网络连通性/数据源可用性。")
+        concise.append("\n⚠️ 全部板块抓取失败，以下为失败摘要：")
+        digest = build_failure_digest(failures, limit=5)
+        if digest:
+            concise.extend(digest)
+        concise.append("请优先检查：网络可达性、Google News RSS可用性、Webhook权限。")
 
     concise_text = "\n".join(concise)
     return concise_text, full_text, all_failed
