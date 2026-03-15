@@ -191,6 +191,80 @@ def build_company_intel(sectors: List[dict], all_items: List[dict], per_sector_l
     return by_sector
 
 
+
+
+def format_pub_time(pub_date: str) -> str:
+    if not pub_date:
+        return ""
+    fmts = [
+        "%a, %d %b %Y %H:%M:%S %Z",
+        "%a, %d %b %Y %H:%M:%S %z",
+    ]
+    for f in fmts:
+        try:
+            dt_obj = dt.datetime.strptime(pub_date, f)
+            if dt_obj.tzinfo is None:
+                dt_obj = dt_obj.replace(tzinfo=dt.timezone.utc)
+            bj = dt_obj.astimezone(dt.timezone(dt.timedelta(hours=8)))
+            return bj.strftime("%Y-%m-%d %H:%M")
+        except Exception:
+            continue
+    return pub_date[:16]
+
+
+def trend_label(item: dict) -> str:
+    neg_tags = {"事故", "监管", "召回"}
+    if item.get("event_tag") in neg_tags or item.get("priority") == "C":
+        return "警惕"
+    if item.get("priority") in {"S", "A"}:
+        return "强化"
+    return "平稳"
+
+
+def top_companies_by_sentiment(items: List[dict], positive: bool, k: int = 3) -> List[str]:
+    scored = []
+    for it in items:
+        base = score_to_num(it.get("priority", "C"))
+        if it.get("event_tag") in {"事故", "监管", "召回"}:
+            base -= 2
+        scored.append((base, it.get("company", "未识别")))
+    scored = [x for x in scored if x[1] != "未识别"]
+    scored.sort(reverse=positive)
+    out = []
+    seen = set()
+    for _, c in scored:
+        if c in seen:
+            continue
+        seen.add(c)
+        out.append(c)
+        if len(out) >= k:
+            break
+    return out
+
+
+def format_sector_spotlight(sector_name: str, items: List[dict], fallback_lines: List[str] = None) -> List[str]:
+    lines = []
+    lines.append(f"## 🔹 {sector_name}板块")
+    lines.append("\n### 🎯 重点公司情报")
+    strongest = top_companies_by_sentiment(items, positive=True, k=3)
+    cautious = top_companies_by_sentiment(items, positive=False, k=3)
+    lines.append(f"\n**🔥 今日最强 (Top 3)**: {', '.join(strongest) if strongest else '暂无'}")
+    lines.append(f"\n**⚠️ 值得警惕 (Top 3)**: {', '.join(cautious) if cautious else '暂无'}")
+
+    if items:
+        for it in items[:6]:
+            tm = format_pub_time(it.get("pubDate", ""))
+            tm_txt = f" ({tm})" if tm else ""
+            lines.append(
+                f"\n- **{it['company']}** [{trend_label(it)}]{tm_txt}: {it['summary']}"
+                f"\n  事件标签: {it['event_tag']} | 优先级: {it['priority']} | A股映射: {', '.join(it['a_share_mapping']) if it.get('a_share_mapping') else '暂无'}"
+                f"\n  来源: {it['source']}"
+            )
+    elif fallback_lines:
+        for ln in fallback_lines[:4]:
+            lines.append("\n" + ln)
+    return lines
+
 def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
     bj_now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8)))
     min_score = watchlist.get("min_score_for_feishu", "B")
@@ -321,6 +395,12 @@ def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
         else:
             full.append("- 暂无重点公司情报")
 
+    full.append("\n## 2.6) 各板块重点公司情报（飞书同款）")
+    for sec in watchlist["sectors"]:
+        sname = sec["name"]
+        sec_items = [x for x in all_items if x.get("sector") == sname]
+        full.extend(["\n" + x if i == 0 else x for i, x in enumerate(format_sector_spotlight(sname, sec_items, company_intel.get(sname, [])))])
+
     full.append("\n## 3) 重点公司异动池")
     for it in company_pool:
         full.append(f"- {it['company']}({it['tier']}) | {it['sector']} | {it['event_tag']} | {it['summary']} | {it['link']}")
@@ -349,38 +429,17 @@ def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
     concise.append(f"【盘前情报简报】{bj_now:%m-%d %H:%M}")
     concise.append("主线雷达：" + "；".join([x.replace("- ", "") for x in radar_lines]))
 
-    selected = [x for x in top_items if score_to_num(x["priority"]) >= score_to_num(min_score)]
-    if not selected:
-        selected = top_items[:5]
-
-    concise.append("\n【今日最高优先级】")
-    if selected:
-        for i, it in enumerate(selected[:8], 1):
-            concise.append(f"{i}) [{it['priority']}] {it['sector']} | {it['company']} | {it['summary']}")
-    else:
-        concise.append("- 暂无可用新闻命中，转入预案内容")
+    # 按用户要求的板块重点公司格式输出
+    for sec in watchlist["sectors"]:
+        sname = sec["name"]
+        sec_items = [x for x in all_items if x.get("sector") == sname]
+        concise.append("")
+        concise.extend(format_sector_spotlight(sname, sec_items, company_intel.get(sname, [])))
 
     concise.append("\n【未来7天事件预告】")
     if event_preview:
-        for ev in event_preview[:5]:
+        for ev in event_preview[:7]:
             concise.append(f"- {ev['date']} {ev['sector']} | {ev['title']}")
-    else:
-        concise.append("- 暂无配置事件")
-
-    concise.append("\n【A级公司焦点池】")
-    for line in build_a_tier_focus(watchlist, limit=10):
-        concise.append(f"- {line}")
-
-    concise.append("\n【各领域重点公司情报】")
-    for sec in watchlist["sectors"]:
-        sname = sec["name"]
-        concise.append(f"- {sname}：")
-        lines = company_intel.get(sname, [])[:3]
-        if lines:
-            for ln in lines:
-                concise.append("  " + ln)
-        else:
-            concise.append("  - 暂无")
 
     if all_failed:
         concise.append("\n⚠️ 全部板块抓取失败，以下为失败摘要：")
