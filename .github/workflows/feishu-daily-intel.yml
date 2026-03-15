@@ -6,11 +6,12 @@ on:
     - cron: '30 23 * * *'
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   run:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,10 +21,20 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Validate FEISHU_WEBHOOK is configured
+        env:
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+        run: |
+          python - <<'PY'
+          import os
+          if not os.getenv("FEISHU_WEBHOOK"):
+              raise SystemExit("FEISHU_WEBHOOK is missing. Please set it in Settings -> Secrets and variables -> Actions.")
+          print("FEISHU_WEBHOOK check passed")
+          PY
+
       - name: Run daily brief script
         env:
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
-          ALLOW_MISSING_WEBHOOK: "1"
         run: |
           python scripts/daily_brief.py
 
