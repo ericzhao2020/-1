@@ -1,4 +1,4 @@
-name: Daily Intel Bot
+name: 每日情报
 
 on:
   workflow_dispatch:
@@ -15,6 +15,11 @@ jobs:
     steps:
       - name: 拉取代码
         uses: actions/checkout@v5
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
 
       - name: 查看仓库文件
         run: ls -la
