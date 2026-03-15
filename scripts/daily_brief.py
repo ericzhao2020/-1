@@ -155,12 +155,12 @@ def build_a_tier_focus(watchlist: dict, limit: int = 12) -> List[str]:
                 maps = c.get("a_share_mapping", [])[:2]
                 mtxt = f" -> A股:{','.join(maps)}" if maps else ""
                 out.append(f"{sname}:{c.get('name')}{mtxt}")
-    return out[:limit]
+    return out[: max(limit, 15)]
 
 
 def build_failure_digest(failures: List[str], limit: int = 5) -> List[str]:
     out = []
-    for i, f in enumerate(failures[:limit], 1):
+    for i, f in enumerate(failures[: max(limit, 8)], 1):
         out.append(f"{i}) {f[:120]}")
     return out
 
@@ -221,7 +221,21 @@ def trend_label(item: dict) -> str:
     return "平稳"
 
 
-def top_companies_by_sentiment(items: List[dict], positive: bool, k: int = 3) -> List[str]:
+def contains_chinese(text: str) -> bool:
+    return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
+
+
+def chinese_brief(item: dict) -> str:
+    company = item.get("company", "该公司")
+    sector = item.get("sector", "相关板块")
+    tag = item.get("event_tag", "动态")
+    summary = item.get("summary", "")
+    if contains_chinese(summary):
+        return summary
+    return f"{company}在{sector}出现{tag}相关动态，建议盘前重点跟踪。"
+
+
+def top_companies_by_sentiment(items: List[dict], positive: bool, k: int = 5) -> List[str]:
     scored = []
     for it in items:
         base = score_to_num(it.get("priority", "C"))
@@ -246,19 +260,18 @@ def format_sector_spotlight(sector_name: str, items: List[dict], fallback_lines:
     lines = []
     lines.append(f"## 🔹 {sector_name}板块")
     lines.append("\n### 🎯 重点公司情报")
-    strongest = top_companies_by_sentiment(items, positive=True, k=3)
-    cautious = top_companies_by_sentiment(items, positive=False, k=3)
-    lines.append(f"\n**🔥 今日最强 (Top 3)**: {', '.join(strongest) if strongest else '暂无'}")
-    lines.append(f"\n**⚠️ 值得警惕 (Top 3)**: {', '.join(cautious) if cautious else '暂无'}")
+    strongest = top_companies_by_sentiment(items, positive=True, k=5)
+    cautious = top_companies_by_sentiment(items, positive=False, k=5)
+    lines.append(f"\n**🔥 今日最强 (Top 5)**: {', '.join(strongest) if strongest else '暂无'}")
+    lines.append(f"\n**⚠️ 值得警惕 (Top 5)**: {', '.join(cautious) if cautious else '暂无'}")
 
     if items:
-        for it in items[:6]:
+        for it in items[:10]:
             tm = format_pub_time(it.get("pubDate", ""))
             tm_txt = f" ({tm})" if tm else ""
             lines.append(
-                f"\n- **{it['company']}** [{trend_label(it)}]{tm_txt}: {it['summary']}"
+                f"\n- **{it['company']}** [{trend_label(it)}]{tm_txt}: {chinese_brief(it)}"
                 f"\n  事件标签: {it['event_tag']} | 优先级: {it['priority']} | A股映射: {', '.join(it['a_share_mapping']) if it.get('a_share_mapping') else '暂无'}"
-                f"\n  来源: {it['source']}"
             )
     elif fallback_lines:
         for ln in fallback_lines[:4]:
@@ -369,10 +382,9 @@ def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
     for i, it in enumerate(top_items, 1):
         full.append(
             f"{i}. [{it['priority']}] [{it['sector']}] {it['company']} | {it['event_tag']}\n"
-            f"   - 摘要：{it['summary']}\n"
+            f"   - 摘要：{chinese_brief(it)}\n"
             f"   - 为什么值得看：{it['why']}\n"
             f"   - A股映射：{', '.join(it['a_share_mapping']) if it['a_share_mapping'] else '暂无'}\n"
-            f"   - 来源：{it['source']}\n"
             f"   - 链接：{it['link']}"
         )
 
