@@ -165,6 +165,32 @@ def build_failure_digest(failures: List[str], limit: int = 5) -> List[str]:
     return out
 
 
+
+
+def build_company_intel(sectors: List[dict], all_items: List[dict], per_sector_limit: int = 8) -> Dict[str, List[str]]:
+    by_sector = {}
+    for sec in sectors:
+        sname = sec.get("name", "")
+        companies = sec.get("companies", [])
+        lines = []
+        for c in companies:
+            cname = c.get("name", "")
+            tier = c.get("tier", "C")
+            amap = ",".join(c.get("a_share_mapping", [])[:3]) if c.get("a_share_mapping") else "暂无"
+            hits = [x for x in all_items if x.get("sector") == sname and x.get("company") == cname]
+            if hits:
+                top = sorted(hits, key=lambda x: (score_to_num(x["priority"]), x["source_rank"]), reverse=True)[0]
+                lines.append(
+                    f"- {cname}({tier}) | 命中{len(hits)}条 | 最新:{top['event_tag']} {top['summary']} | 评分:{top['priority']} | A股:{amap}"
+                )
+            else:
+                lines.append(f"- {cname}({tier}) | 今日未命中重大新闻 | 关注方向:财报/订单/政策/Capex | A股:{amap}")
+            if len(lines) >= per_sector_limit:
+                break
+        by_sector[sname] = lines
+    return by_sector
+
+
 def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
     bj_now = dt.datetime.now(dt.timezone(dt.timedelta(hours=8)))
     min_score = watchlist.get("min_score_for_feishu", "B")
@@ -220,6 +246,7 @@ def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
 
     all_failed = len(all_items) == 0
     top_items = select_top_items(all_items, watchlist.get("max_top_items", 10))
+    company_intel = build_company_intel(watchlist["sectors"], all_items, per_sector_limit=8)
     company_pool = [
         x
         for x in sorted(
@@ -284,6 +311,16 @@ def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
         for it in items:
             full.append(f"- [{it['priority']}] {it['summary']} ({it['company']} / {it['event_tag']})")
 
+    full.append("\n## 2.5) 各领域重点公司情报")
+    for sec in watchlist["sectors"]:
+        sname = sec["name"]
+        full.append(f"\n### {sname} 重点公司")
+        lines = company_intel.get(sname, [])
+        if lines:
+            full.extend(lines)
+        else:
+            full.append("- 暂无重点公司情报")
+
     full.append("\n## 3) 重点公司异动池")
     for it in company_pool:
         full.append(f"- {it['company']}({it['tier']}) | {it['sector']} | {it['event_tag']} | {it['summary']} | {it['link']}")
@@ -333,6 +370,17 @@ def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
     concise.append("\n【A级公司焦点池】")
     for line in build_a_tier_focus(watchlist, limit=10):
         concise.append(f"- {line}")
+
+    concise.append("\n【各领域重点公司情报】")
+    for sec in watchlist["sectors"]:
+        sname = sec["name"]
+        concise.append(f"- {sname}：")
+        lines = company_intel.get(sname, [])[:3]
+        if lines:
+            for ln in lines:
+                concise.append("  " + ln)
+        else:
+            concise.append("  - 暂无")
 
     if all_failed:
         concise.append("\n⚠️ 全部板块抓取失败，以下为失败摘要：")
