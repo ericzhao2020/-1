@@ -181,10 +181,10 @@ def build_company_intel(sectors: List[dict], all_items: List[dict], per_sector_l
             if hits:
                 top = sorted(hits, key=lambda x: (score_to_num(x["priority"]), x["source_rank"]), reverse=True)[0]
                 lines.append(
-                    f"- {cname}({tier}) | 命中{len(hits)}条 | 最新:{top['event_tag']} {top['summary']} | 评分:{top['priority']} | A股:{amap}"
+                    f"- {cname}({tier}) | 命中{len(hits)}条 | 最新:{chinese_brief(top)} | 强度:{trend_label(top)}"
                 )
             else:
-                lines.append(f"- {cname}({tier}) | 今日未命中重大新闻 | 关注方向:财报/订单/政策/Capex | A股:{amap}")
+                lines.append(f"- {cname}({tier}) | 今日未命中重大新闻")
             if len(lines) >= per_sector_limit:
                 break
         by_sector[sname] = lines
@@ -260,22 +260,24 @@ def format_sector_spotlight(sector_name: str, items: List[dict], fallback_lines:
     lines = []
     lines.append(f"## 🔹 {sector_name}板块")
     lines.append("\n### 🎯 重点公司情报")
-    strongest = top_companies_by_sentiment(items, positive=True, k=5)
-    cautious = top_companies_by_sentiment(items, positive=False, k=5)
-    lines.append(f"\n**🔥 今日最强 (Top 5)**: {', '.join(strongest) if strongest else '暂无'}")
-    lines.append(f"\n**⚠️ 值得警惕 (Top 5)**: {', '.join(cautious) if cautious else '暂无'}")
 
-    if items:
-        for it in items[:10]:
+    valid_items = [x for x in items if x.get("company") and x.get("company") != "未识别"]
+    strongest = top_companies_by_sentiment(valid_items, positive=True, k=3)
+    cautious = top_companies_by_sentiment(valid_items, positive=False, k=3)
+    lines.append(f"\n**🔥 今日最强 (Top 3)**: {', '.join(strongest) if strongest else '暂无'}")
+    lines.append(f"\n**⚠️ 值得警惕 (Top 3)**: {', '.join(cautious) if cautious else '暂无'}")
+
+    major_items = [x for x in valid_items if x.get("priority") in {"S", "A", "B"}]
+    if major_items:
+        for it in major_items[:6]:
             tm = format_pub_time(it.get("pubDate", ""))
             tm_txt = f" ({tm})" if tm else ""
-            lines.append(
-                f"\n- **{it['company']}** [{trend_label(it)}]{tm_txt}: {chinese_brief(it)}"
-                f"\n  事件标签: {it['event_tag']} | 优先级: {it['priority']} | A股映射: {', '.join(it['a_share_mapping']) if it.get('a_share_mapping') else '暂无'}"
-            )
-    elif fallback_lines:
-        for ln in fallback_lines[:4]:
-            lines.append("\n" + ln)
+            lines.append(f"\n- **{it['company']}** [{trend_label(it)}]{tm_txt}: {chinese_brief(it)}")
+    else:
+        lines.append("\n- 今日暂无重点公司重大新闻。")
+        if fallback_lines:
+            for ln in fallback_lines[:2]:
+                lines.append("\n" + ln)
     return lines
 
 def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
@@ -381,10 +383,9 @@ def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
     full.append("\n## 1) 今日最高优先级（5-10条）")
     for i, it in enumerate(top_items, 1):
         full.append(
-            f"{i}. [{it['priority']}] [{it['sector']}] {it['company']} | {it['event_tag']}\n"
+            f"{i}. [{it['priority']}] [{it['sector']}] {it['company']}\n"
             f"   - 摘要：{chinese_brief(it)}\n"
             f"   - 为什么值得看：{it['why']}\n"
-            f"   - A股映射：{', '.join(it['a_share_mapping']) if it['a_share_mapping'] else '暂无'}\n"
             f"   - 链接：{it['link']}"
         )
 
@@ -395,7 +396,7 @@ def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
             full.append("- 暂无有效情报")
             continue
         for it in items:
-            full.append(f"- [{it['priority']}] {it['summary']} ({it['company']} / {it['event_tag']})")
+            full.append(f"- [{it['priority']}] {chinese_brief(it)} ({it['company']})")
 
     full.append("\n## 2.5) 各领域重点公司情报")
     for sec in watchlist["sectors"]:
@@ -415,7 +416,7 @@ def build_reports(watchlist: dict) -> Tuple[str, str, bool]:
 
     full.append("\n## 3) 重点公司异动池")
     for it in company_pool:
-        full.append(f"- {it['company']}({it['tier']}) | {it['sector']} | {it['event_tag']} | {it['summary']} | {it['link']}")
+        full.append(f"- {it['company']}({it['tier']}) | {it['sector']} | {chinese_brief(it)} | {it['link']}")
 
     full.append("\n## 4) 原文链接池")
     for it in raw_links[:80]:
