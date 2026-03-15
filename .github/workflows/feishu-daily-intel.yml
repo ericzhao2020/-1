@@ -1,0 +1,33 @@
+name: Feishu Daily Intel
+
+on:
+  schedule:
+    # 07:30 Beijing = 23:30 UTC (previous day)
+    - cron: '30 23 * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run daily brief script
+        env:
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+        run: |
+          python scripts/daily_brief.py
+
+      - name: Upload full markdown report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-brief-markdown
+          path: output/*.md
+          if-no-files-found: ignore
