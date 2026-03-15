@@ -1,0 +1,137 @@
+{
+  "timezone": "Asia/Shanghai",
+  "max_top_items": 10,
+  "max_sector_items": 4,
+  "max_company_moves": 12,
+  "min_score_for_feishu": "B",
+  "high_quality_sources": [
+    "Reuters",
+    "Bloomberg",
+    "WSJ",
+    "Financial Times",
+    "SEC",
+    "NASDAQ",
+    "HKEX",
+    "SSE",
+    "SZSE",
+    "China Securities Journal",
+    "Caixin Global"
+  ],
+  "price_noise_keywords": [
+    "stock rises",
+    "stock falls",
+    "shares up",
+    "shares down",
+    "price target",
+    "analyst upgrade",
+    "analyst downgrade"
+  ],
+  "event_tag_rules": {
+    "财报": ["earnings", "results", "guidance", "quarter", "业绩", "财报", "年报", "季报"],
+    "订单": ["order", "contract", "中标", "订单", "签约"],
+    "政策": ["policy", "regulator", "approval", "tariff", "补贴", "政策", "监管"],
+    "产品": ["launch", "product", "release", "chip", "model", "发布", "新品"],
+    "Capex": ["capex", "investment", "fab", "expansion", "扩产", "资本开支"],
+    "价格": ["price", "pricing", "涨价", "降价"],
+    "临床": ["clinical", "phase", "trial", "fda", "nda", "临床"],
+    "事故": ["accident", "fire", "outage", "recall", "事故", "召回"]
+  },
+  "sectors": [
+    {
+      "name": "科技AI",
+      "queries": [
+        "Microsoft Alphabet Amazon Meta Apple Tesla AI capex earnings",
+        "NVIDIA AMD Broadcom Arista TSMC ASML AI server",
+        "CrowdStrike Palo Alto Zscaler Okta cyber security",
+        "Snowflake MongoDB Datadog Cloudflare Atlassian"
+      ],
+      "radar_rules": {
+        "positive_tags": ["财报", "订单", "Capex", "产品"],
+        "negative_tags": ["事故", "监管", "召回"]
+      },
+      "companies": [
+        {"name": "Microsoft", "tier": "A", "a_share_mapping": ["浪潮信息", "中际旭创"]},
+        {"name": "NVIDIA", "tier": "A", "a_share_mapping": ["中际旭创", "沪电股份", "工业富联"]},
+        {"name": "TSMC", "tier": "A", "a_share_mapping": ["中芯国际", "华虹公司"]},
+        {"name": "Snowflake", "tier": "B", "a_share_mapping": ["用友网络", "金山办公"]},
+        {"name": "Okta", "tier": "C", "a_share_mapping": ["奇安信", "启明星辰"]}
+      ]
+    },
+    {
+      "name": "电力电网设备",
+      "queries": [
+        "国电南瑞 许继电气 平高电气 思源电气 特变电工 阳光电源 电网",
+        "GE Vernova Siemens Energy Schneider ABB Eaton Vertiv grid"
+      ],
+      "radar_rules": {
+        "positive_tags": ["订单", "政策", "Capex"],
+        "negative_tags": ["事故", "召回"]
+      },
+      "companies": [
+        {"name": "国电南瑞", "tier": "A", "a_share_mapping": ["国电南瑞", "许继电气", "平高电气"]},
+        {"name": "阳光电源", "tier": "A", "a_share_mapping": ["阳光电源", "科华数据", "科士达"]},
+        {"name": "ABB", "tier": "B", "a_share_mapping": ["思源电气", "金盘科技"]},
+        {"name": "Vertiv", "tier": "C", "a_share_mapping": ["科华数据", "英维克"]}
+      ]
+    },
+    {
+      "name": "能源矿业",
+      "queries": [
+        "BHP Rio Tinto Vale Freeport Glencore copper lithium uranium",
+        "Exxon Chevron Shell BP Total LNG oil services",
+        "紫金矿业 中国海油 中国石油 中国石化 中国神华 稀土 锂"
+      ],
+      "radar_rules": {
+        "positive_tags": ["价格", "订单", "政策"],
+        "negative_tags": ["事故", "监管"]
+      },
+      "companies": [
+        {"name": "BHP", "tier": "A", "a_share_mapping": ["紫金矿业", "洛阳钼业"]},
+        {"name": "ExxonMobil", "tier": "A", "a_share_mapping": ["中国海油", "中国石油", "中国石化"]},
+        {"name": "Cameco", "tier": "B", "a_share_mapping": ["中国核电", "中广核电力"]},
+        {"name": "Standard Lithium", "tier": "C", "a_share_mapping": ["赣锋锂业", "天齐锂业"]}
+      ]
+    },
+    {
+      "name": "医药医疗",
+      "queries": [
+        "Pfizer Roche Merck Eli Lilly Novo Nordisk earnings FDA",
+        "百济神州 信达生物 康方生物 恒瑞医药 药明康德 泰格医药",
+        "Medtronic Intuitive Surgical Thermo Fisher Danaher 迈瑞 联影"
+      ],
+      "radar_rules": {
+        "positive_tags": ["临床", "财报", "政策"],
+        "negative_tags": ["事故", "召回", "监管"]
+      },
+      "companies": [
+        {"name": "Eli Lilly", "tier": "A", "a_share_mapping": ["恒瑞医药", "翰宇药业"]},
+        {"name": "Novo Nordisk", "tier": "A", "a_share_mapping": ["华东医药", "甘李药业"]},
+        {"name": "百济神州", "tier": "A", "a_share_mapping": ["百济神州", "信达生物"]},
+        {"name": "Intuitive Surgical", "tier": "B", "a_share_mapping": ["迈瑞医疗", "微创医疗"]},
+        {"name": "Amgen", "tier": "C", "a_share_mapping": ["药明康德", "康龙化成"]}
+      ]
+    },
+    {
+      "name": "汽车",
+      "queries": [
+        "比亚迪 吉利 长城 上汽 广汽 长安 理想 小鹏 蔚来 小米汽车",
+        "Tesla Toyota Volkswagen Mercedes BMW Stellantis GM Ford Hyundai"
+      ],
+      "radar_rules": {
+        "positive_tags": ["订单", "产品", "价格"],
+        "negative_tags": ["事故", "召回", "监管"]
+      },
+      "companies": [
+        {"name": "Tesla", "tier": "A", "a_share_mapping": ["比亚迪", "拓普集团", "旭升集团"]},
+        {"name": "BYD", "tier": "A", "a_share_mapping": ["比亚迪", "宁德时代", "德赛西威"]},
+        {"name": "Toyota", "tier": "B", "a_share_mapping": ["上汽集团", "广汽集团"]},
+        {"name": "Rivian", "tier": "C", "a_share_mapping": ["长城汽车", "福耀玻璃"]}
+      ]
+    }
+  ],
+  "upcoming_events": [
+    {"date": "2026-03-17", "sector": "科技AI", "title": "NVIDIA GTC 相关发布", "why": "关注新一代AI芯片路线与供应链节奏"},
+    {"date": "2026-03-18", "sector": "医药医疗", "title": "FDA顾问委员会会议（示例）", "why": "可能影响减重/肿瘤管线预期"},
+    {"date": "2026-03-19", "sector": "能源矿业", "title": "OPEC+月度会议（示例）", "why": "油价与油服订单弹性观察"}
+  ]
+}
