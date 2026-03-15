@@ -366,6 +366,9 @@ def main():
     webhook = os.getenv("FEISHU_WEBHOOK")
     if not webhook:
         print(msg)
+        if os.getenv("ALLOW_MISSING_WEBHOOK", "0") == "1":
+            print("Warning: FEISHU_WEBHOOK is missing; skipping push by configuration.")
+            return
         raise SystemExit("Missing FEISHU_WEBHOOK environment variable")
 
     try:
